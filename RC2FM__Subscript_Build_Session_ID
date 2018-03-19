@@ -1,0 +1,13 @@
+#Collect environment variables
+Exit Script [Let ( [ 
+$$rc2fm_session_id = 
+	"&persistent_id=" & Base64Encode ( Get ( PersistentID ) ) & 
+	"&device=" & Base64Encode ( Get ( Device ) ) & 
+	"&platform=" & Base64Encode ( Get ( SystemPlatform ) ) & 
+	"&network=" & Base64Encode (  If ( Abs ( Get ( SystemPlatform ) ) = 3 ; Get ( NetworkType ) ; "0" ) ) & 
+	"&fm_version=" &  Base64Encode ( Get ( ApplicationVersion ) ) &
+	"&user_language=" & Base64Encode ( Get ( ApplicationLanguage ) ) ] ; 
+//calculation
+ "" 
+) //end Let
+]
