@@ -1,0 +1,20 @@
+#Store global variables in field (for value list population)
+If [not IsEmpty ( $$DirectNumber )]
+	Set Field By Name [$$rc2fm_caller_id_storage; "Direct number " & PhoneFormat ( $$DirectNumber ; "# (###) ###-####" )]
+End If
+If [not IsEmpty ( $$MainCompanyNumber )]
+	Set Field By Name [$$rc2fm_caller_id_storage; GetField ( $$rc2fm_caller_id_storage ) & ¶ & "Main company number " & PhoneFormat ( $$MainCompanyNumber ; "# (###) ###-####" )]
+End If
+If [not IsEmpty ( $$CompanyFaxNumber )]
+	Set Field By Name [$$rc2fm_caller_id_storage; GetField ( $$rc2fm_caller_id_storage ) & ¶ & "Company fax number " & PhoneFormat ( $$CompanyFaxNumber ; "# (###) ###-####" )]
+End If
+If [not IsEmpty ( $$CompanyNumber )]
+	Set Field By Name [$$rc2fm_caller_id_storage; GetField ( $$rc2fm_caller_id_storage ) & ¶ & "Company number " & PhoneFormat ( $$CompanyNumber ; "# (###) ###-####" )]
+End If
+#
+#set default caller ID (invert this conditional sequence to modify the default)
+If [not IsEmpty ( $$DirectNumber )]
+	Set Field [RC2FM_GLOBALS::RingOut_CallerID_Selected[]; "Direct number " & PhoneFormat ( $$DirectNumber ; "# (###) ###-####" )]
+Else If [not IsEmpty ( $$MainCompanyNumber )]
+	Set Field [RC2FM_GLOBALS::RingOut_CallerID_Selected[]; "Main company number " & PhoneFormat ( $$MainCompanyNumber ; "# (###) ###-####" )]
+End If
