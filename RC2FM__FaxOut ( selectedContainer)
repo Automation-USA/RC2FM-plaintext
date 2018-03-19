@@ -1,0 +1,57 @@
+Allow User Abort [On]
+#
+#Test for script parameter and required global variables
+If [IsEmpty ( Get ( ScriptParameter ) ) or IsEmpty ( $$FaxToPhone )]
+	Exit Script [958]
+End If
+Set Variable [$fileContainer; Value:Get ( ScriptParameter )]
+#
+#Capture destination fax number from global variable
+Set Variable [$toPhone; Value:$$FaxToPhone]
+#
+#Validate container file size against platform and API restrictions
+Set Variable [$fileSize; Value:Round ( 
+//number
+GetContainerAttribute ( GetField ( $fileContainer ) ; "fileSize" ) / 1024 ; 
+//precision
+0
+ )]
+#
+Perform Script ["RC2FM__FaxOut_Validate_FileSize ( param )"; Parameter: $fileSize]
+Set Variable [$result; Value:Get ( ScriptResult )]
+If [IsEmpty ( $result ) or $result = 0]
+	Exit Script []
+End If
+#
+#Parse container's file name and remove special characters
+Allow User Abort [Off]
+Perform Script ["RC2FM__Utility__Cleanup_FileName ( param )"; Parameter: GetContainerAttribute ( GetField ( $fileContainer ) ; "Filename" )]
+Set Variable [$fileName; Value:Get ( ScriptResult )]
+If [IsEmpty ( $fileName or $fileName = 958 )]
+	Perform Script ["RC2FM__Fail [Internal]"; Parameter: "{\"error\":10,\"message\":" & "File name is invalid or missing." & "}"]
+	Exit Script []
+End If
+#
+#Validate file type against supported MIME types
+Perform Script ["RC2FM__Subscript__FaxOut_Validate ( param )"; Parameter: $fileName]
+Set Variable [$mimeType; Value:Get ( ScriptResult )]
+If [IsEmpty ( $mimeType or $mimeType = 0 )]
+	Exit Script []
+End If
+#
+#Declare FaxOut global variables
+Set Variable [$$toPhone; Value:$toPhone]
+Set Variable [$$fileName; Value:$fileName]
+Set Variable [$$mimeType; Value:$mimeType]
+Set Variable [$$fileContainer; Value:$fileContainer]
+#
+#Submit FaxOut request
+Perform Script ["RC2FM__Function__FaxOut_SUBMIT ( params )"]
+#
+#Process response
+Set Variable [$result; Value:Get ( ScriptResult )]
+If [IsEmpty ( $result ) or $result = 958]
+	Perform Script ["RC2FM__Fail [Internal]"; Parameter: "{\"error\":958,\"message\":" & "FaxOut parameters missing." & "}"]
+End If
+#
+#
