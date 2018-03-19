@@ -1,0 +1,30 @@
+#Extracts available company phone numbers (caller ID choices) from Login API response and store them as global variables
+#
+#Test for script parameter
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [958]
+End If
+#
+#Trim and parse JSON
+Set Variable [$rawJSON; Value:TrimAll ( Get ( ScriptParameter ) ; 1 ; 2 )
+//TrimAll ( RC2FM_GLOBALS::API_Response__Auth; 1 ; 2 )]
+Set Variable [$trimmedValues; Value:Substitute ( $rawJSON ; [ ","; ¶ ] ; [ "{" ; ""] ; ["}" ; "" ] ; [ "\"" ; ""] ; [ "+" ; "" ] )]
+Set Variable [$NumbersCount; Value:ValueCount ( $trimmedValues )]
+#
+#Loop thru JSON values and initilize global variables
+Set Variable [$LoopCounter; Value:1]
+Loop
+	Set Variable [$aNumber; Value:GetValue ( $trimmedValues ; $LoopCounter )]
+	Set Variable [$declarations; Value:Let ( [ 
+		
+		splitPair = Substitute ( $aNumber ; ":" ; ¶ ) ;
+		$theLabel = LeftValues ( splitPair ; 1 ) ; 
+		$theNumber = RightValues ( splitPair ; 1 ) ] ; 
+		//calculation
+		Evaluate ( "Let ( [ $$" & $theLabel & " = " & $theNumber & " ] ; \"\" )" )
+
+ ) //end Let]
+	#
+	Set Variable [$LoopCounter; Value:$LoopCounter + 1]
+	Exit Loop If [$LoopCounter > $NumbersCount]
+End Loop
