@@ -1,0 +1,10 @@
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [10]
+End If
+#
+Set Variable [$param; Value:Get ( ScriptParameter )]
+Exit Script [Substitute ( $param ; 
+    [Char ( "10" ); ""]; 
+    [Char ( "13" ); ""]; 
+    [Char ( "¶" ); ""]
+)]
