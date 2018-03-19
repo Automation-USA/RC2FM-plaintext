@@ -1,0 +1,48 @@
+#Name:
+Subscript__Loop_Clear_Fields_By_Name ( fieldnamesList )
+History:
+Created by Automation USA - Julio
+Created: 6-4-2013
+Purpose:
+Generic script used to clear multiple fields by name
+Parameters:
+Field Names (return delimited values)
+Important Notes:
+None
+#
+Allow User Abort [Off]
+#
+#Escape if parameter is not supplied
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script []
+End If
+#
+#Escape if script trigger global variable flag is set to disabled
+If [$$~TRIGGERS_DISABLE
+or $$~DISABLETRIGGERS]
+	Exit Script []
+End If
+#
+#Declare local variables
+Set Variable [$Count_fieldnamesList; Value:ValueCount ( Get ( ScriptParameter )  )]
+Set Variable [$fieldnamesList; Value:Get ( ScriptParameter )]
+#
+#Loop thru field list and clear contents
+Set Variable [$LoopCounter; Value:1]
+Loop
+	Set Variable [$fieldname; Value:GetValue ( $fieldnamesList; $LoopCounter )]
+	If [IsEmpty ( GetField ( $fieldname ) )]
+		Set Variable [$LoopCounter; Value:$LoopCounter + 1]
+		Set Variable [$EmptyFields; Value:$EmptyFields + 1]
+	Else
+		Set Field By Name [$fieldname; ""]
+		Set Variable [$LoopCounter; Value:$LoopCounter + 1]
+	End If
+	Exit Loop If [$LoopCounter > $Count_fieldnamesList]
+End Loop
+#
+If [$EmptyFields = $Count_fieldnamesList]
+	Exit Script []
+End If
+#
+// Refresh Window [Flush cached join results]
