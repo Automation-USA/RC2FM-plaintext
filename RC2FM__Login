@@ -1,0 +1,22 @@
+#Gather required environment parameters
+Perform Script ["RC2FM__Subscript_Build_Session_ID"]
+#
+#Compile authentication url
+Set Variable [$Auth; Value:RC2FM_SETTINGS::RC2FM_BaseURL & "/api/login.php?auth=" & 
+Base64Encode ( Filter ( RC2FM_GLOBALS::RC_User_Name  ; "0123456789+" ) ) & 
+"&password=" & Base64Encode ( RC2FM_GLOBALS::RC_User_Password ) & 
+If ( not IsEmpty ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "&extension=" & Base64Encode ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "" ) & 
+$$rc2fm_session_id]
+#
+#Submit Login
+Insert from URL [Select; No dialog; RC2FM_GLOBALS::API_Response__Auth; $Auth]
+#unlock record
+Go to Field [Select/perform]
+#
+#process api response
+If [PatternCount ( RC2FM_GLOBALS::API_Response__Auth ; "success" )]
+	Set Variable [$loginResponse; Value:TrimAll ( RC2FM_GLOBALS::API_Response__Auth ; 1 ; 2 )]
+	Perform Script ["RC2FM__Utility__Parse_CalerIDs (rawJSON)"; Parameter: $loginResponse]
+	Perform Script ["RC2FM__Subscript_Store_CallerIDs"]
+End If
+Refresh Window []
