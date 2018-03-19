@@ -1,0 +1,40 @@
+#Test for script parameter
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [958]
+End If
+Set Variable [$pid; Value:Get ( ScriptParameter )]
+#
+#Test for live token
+Perform Script ["RC2FM__Check_Session_Status"]
+Set Variable [$tokenStatus; Value:Get ( ScriptResult )]
+#
+#Process token test response
+If [$tokenStatus = 0 and not IsEmpty ( RC2FM_GLOBALS::RC_User_Name ) & not IsEmpty ( RC2FM_GLOBALS::RC_User_Password )]
+	Perform Script ["RC2FM__Login"]
+	If [IsEmpty ( $$extension )]
+		Exit Script ["No active session and no user credentials"]
+	End If
+Else If [$tokenStatus = 0 and IsEmpty ( RC2FM_GLOBALS::RC_User_Name ) or IsEmpty ( RC2FM_GLOBALS::RC_User_Password )]
+	Exit Script ["No active session and no user credentials"]
+End If
+#
+#Proceed with updating log entry 'Read' status 
+Freeze Window
+Set Variable [$url; Value:RC2FM_SETTINGS::RC2FM_BaseURL & "/readstatus.php?auth=" & 
+Base64Encode ( RC2FM_GLOBALS::RC_User_Name )  & 
+"&user_id=" & Base64Encode ( $$extension ) & 
+"&account_id=" & Base64Encode ( $$account ) 
+& $$rc2fm_session_id & 
+"&pid=" & Base64Encode ( $pid ) 
+//pid example: Base64Encode ( RC2FM_LOGS::id )*/]
+Insert from URL [Select; No dialog; RC2FM_GLOBALS::API_Response__RC_Reply; $url]
+#
+If [PatternCount ( RC2FM_GLOBALS::API_Response__RC_Reply ; "true" )]
+	Set Field [RC2FM_LOGS::readStatus[]; "Read"]
+	Perform Script ["RC2FM__Utility__Convert_Timestamp_to_UNIX ( param )"; Parameter: Get ( CurrentHostTimestamp )]
+	Set Variable [$unixTime; Value:Get ( ScriptResult )]
+	If [Length ( $unixTime ) > 11]
+		Set Field [RC2FM_LOGS::lastModifiedTime[]; $unixTime]
+	End If
+End If
+Go to Field [Select/perform]
