@@ -1,0 +1,32 @@
+#Name:
+RC2FM__Config
+History:
+Created by Automation USA - Julio Toledo
+Last Modified: 7-3-2016
+Purpose:
+Initializes global variables that specify dynamic paths to fields, layouts, and table occurrences required by RC2FM
+Parameters:
+None
+Important Notes:
+We've made every effort to make the RC2FM integration as dyanmic and easily configurable as possible so it can be easily transferred to any FileMaker solution. However there are some script steps such as "Insert from URL" which require hard coded paths. Be sure to review all scripts when pasting/importing into your solution.
+#
+#Table Occurrence Names
+Set Variable [$$attachmentsTO; Value://stores the default table occurrence name for attachments  (where call recordings, faxes, voicemail binaries are stored) 
+//specify table occurrence name here
+"RC2FM_ATTACHMENTS::"]
+Set Variable [$$messageLogTO; Value://stores the default table occurrence for logs (where all user activity is stored) 
+//specify table occurrence name here
+"RC2FM_LOGS::"]
+#
+#Layout Names
+Set Variable [$$attachmentsLayout; Value://stores the default layout for the message attachments table occurrence  (where call recordings, faxes, voicemail binaries are stored) 
+//specify layout name here
+"RC2FM_ATTACHMENTS"]
+Set Variable [$$messageLogLayout; Value://stores the default layout for the message log table occurrence (where log records for all user activity is stored) 
+//specify layout name here
+"ScriptUse__RC2FM__Logs"]
+#
+#Field Names
+Set Variable [$$rc2fm_caller_id_storage; Value://stores the caller IDs available to the RingCentral user currently signed in so they can be selected from a value list. 
+//Specify field name/path here
+"DEMO_USER_SESSIONS__user_session_id::RC_CallerID_Choices"]
