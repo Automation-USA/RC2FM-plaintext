@@ -1,0 +1,75 @@
+#
+Allow User Abort [Off]
+#Test for global variables
+If [IsEmpty ( $$callTo ) or IsEmpty ( $$callFrom ) or IsEmpty ( $$callerID )]
+	Exit Script [958]
+End If
+#
+#Test for live token
+Perform Script ["RC2FM__Check_Session_Status"]
+Set Variable [$tokenStatus; Value:Get ( ScriptResult )]
+#
+#Process token test response
+If [$tokenStatus = 0 and not IsEmpty ( RC2FM_GLOBALS::RC_User_Name ) & not IsEmpty ( RC2FM_GLOBALS::RC_User_Password )]
+	Perform Script ["RC2FM__Login"]
+	If [IsEmpty ( $$extension )]
+		Exit Script ["No active session and no user credentials"]
+	End If
+Else If [$tokenStatus = 0 and IsEmpty ( RC2FM_GLOBALS::RC_User_Name ) or IsEmpty ( RC2FM_GLOBALS::RC_User_Password )]
+	Exit Script ["No active session and no user credentials"]
+End If
+#
+#Proceed with RingOut
+// Set Variable [$$callerID; Value:If ( IsEmpty ( $$DirectNumber) ; $$MainCompanyNumber ; $$DirectNumber ) //$$DirectNumber //]
+Set Field [RC2FM_GLOBALS::API_Response__RC_Reply[]; "Loading..."]
+#
+#Initialize session variables
+Perform Script ["RC2FM__Subscript_Build_Session_ID"]
+#
+#Use Insert from URL method on WebDirect platform
+If [PatternCount( Get ( ApplicationVersion ) ; "Web" ) //PlatformWeb]
+	Set Variable [$url; Value:RC2FM_SETTINGS::RC2FM_BaseURL & "/api/v1.php?action=ringout&auth=" & 
+Base64Encode ( RC2FM_GLOBALS::RC_User_Name )  & If ( not IsEmpty ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "&extension=" & Base64Encode ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "" )  & 
+"&user_id=" & Base64Encode ( $$extension ) & 
+"&account_id=" & Base64Encode ( $$account ) & 
+$$rc2fm_session_id & 
+"&to=" & Base64Encode ( $$toPhone ) & 
+"&from=" & Base64Encode ( $$fromPhone ) &
+"&caller_id=" //& Base64Encode ( $$callerID )]
+	Insert from URL [Select; No dialog; RC2FM_GLOBALS::API_Response__RC_Reply; $url]
+	Go to Field [Select/perform]
+Else
+	#Use AJAX form method in WebViewer (all other FM platforms)
+	#
+	#Capture host IP for AJAX response
+	Set Variable [$FileHost; Value:Case (
+    Get ( HostIPAddress ) = "" ;
+    "$";  // File is local
+    Get ( HostIPAddress )
+)]
+	#
+	#Substitute variables in AJAX template
+	Set Variable [$url; Value:Let
+(
+[
+  $html = Substitute ( 
+	RC2FM_SETTINGS::RC_HtmlAjaxTemplate; 
+	["{{URL}}"; RC2FM_SETTINGS::RC2FM_BaseURL & "/api/v1.php?action=ringout&auth=" & 
+	Base64Encode ( RC2FM_GLOBALS::RC_User_Name ) & If ( not IsEmpty ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "&extension=" & Base64Encode ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "" )  & 	"&user_id=" & Base64Encode ( $$extension ) & "&account_id=" & Base64Encode ( $$account ) & $$rc2fm_session_id];
+	["{{FORM_DATA}}"; "to=" & Base64Encode ( $$callTo ) & "&from=" & Base64Encode ( $$callFrom ) & "&caller_id=" ];
+	["{{FILE_HOST}}"; $FileHost ];
+	["{{FILE_NAME}}"; Get( FileName )]
+    )
+];
+"data:text/html," & $html
+)]
+	#Submit to WebViewer
+	// Freeze Window
+	Set Web Viewer [Object Name: "ajax_web_viewer"; URL: $url]
+	Go to Field [Select/perform]
+End If
+#
+#Clean up
+Set Variable [$$callTo; Value:""]
+Set Variable [$$callFrom; Value:""]
+Set Variable [$$callerID; Value:""] 
