@@ -1,0 +1,6 @@
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [10]
+End If
+#
+Set Variable [$param; Value:Get ( ScriptParameter )]
+Exit Script [Filter ( $param ; "0123456789" )]
