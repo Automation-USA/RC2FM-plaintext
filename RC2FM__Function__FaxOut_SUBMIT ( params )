@@ -1,0 +1,89 @@
+Allow User Abort [Off]
+#Test for global variables
+If [IsEmpty ( $$toPhone ) or IsEmpty ( $$fileName ) or IsEmpty ( $$mimeType )]
+	Exit Script [958]
+End If
+#
+#Test for live token
+Perform Script ["RC2FM__Check_Session_Status"]
+Set Variable [$tokenStatus; Value:Get ( ScriptResult )]
+#
+#Process response
+If [$tokenStatus = 0 and not IsEmpty ( RC2FM_GLOBALS::RC_User_Name ) & not IsEmpty ( RC2FM_GLOBALS::RC_User_Password )]
+	Perform Script ["RC2FM__Login"]
+	If [IsEmpty ( $$extension )]
+		Exit Script ["No active session and no user credentials"]
+	End If
+Else If [$tokenStatus = 0 and IsEmpty ( RC2FM_GLOBALS::RC_User_Name ) or IsEmpty ( RC2FM_GLOBALS::RC_User_Password )]
+	Exit Script ["No active session and no user credentials"]
+End If
+#
+#Initialize session variables
+Perform Script ["RC2FM__Subscript_Build_Session_ID"]
+#
+#Initialize UI 
+Set Field [RC2FM_GLOBALS::API_Response__RC_Reply[]; "Loading..."]
+#
+#Execute FaxOut function
+If [PatternCount( Get ( ApplicationVersion ) ; "Web" ) //PlatformWeb]
+	#Use Insert from URL method on WebDirect platform 
+	Set Variable [$url; Value:RC2FM_SETTINGS::RC2FM_BaseURL & "/api/v1.php?action=fax_base64&auth=" & 
+Base64Encode ( RC2FM_GLOBALS::RC_User_Name )  & If ( not IsEmpty ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "&extension=" & Base64Encode ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "" )  & 
+"&user_id=" & Base64Encode ( $$extension ) & 
+"&account_id=" & Base64Encode ( $$account ) & 
+$$rc2fm_session_id & 
+"&to=" & Base64Encode ( $toPhone ) & 
+"&faxResolution=" & Base64Encode ( "High") & 
+"&Content-Type=" & Base64Encode ( $$mimeType ) &
+If ( not IsEmpty ( $$coverPageIndex ) ; "&coverIndex=" & Base64Encode ( $$coverPageIndex ) ; "&coverIndex=" & Base64Encode ( "0" ) ) & 
+If ( not IsEmpty ( $$coverPageText ) and not IsEmpty ( $$coverPageIndex ); "&coverPageText=" & Base64Encode ( $$coverPageText) ; "" ) & 
+"&attachment_filename=" & Base64Encode ( $fileName ) & 
+"&attachment_content=" & Substitute ( Base64Encode ( GetField ( $$fileContainer ) ) ;[Char ( "10" ); ""]; [Char ( "13" ); ""]; [Char ( "¶" ); ""] )]
+	Insert from URL [Select; No dialog; RC2FM_GLOBALS::API_Response__RC_Reply; $url]
+Else
+	#Use AJAX form method in WebViewer (all other FM platforms)
+	#
+	#Capture host IP for AJAX response
+	Set Variable [$FileHost; Value:Case (
+    Get ( HostIPAddress ) = "" ;
+    "$";  // File is local
+    Get ( HostIPAddress )
+)]
+	#
+	#Substitute variables in AJAX template
+	Set Field [RC2FM_GLOBALS::API_Functions_Utility_field[]; "data:text/html," & 
+Substitute ( 
+      RC2FM_SETTINGS::RC_HtmlAjaxTemplate; 
+      ["{{URL}}"; RC2FM_SETTINGS::RC2FM_BaseURL & "/api/v1.php?action=fax_base64"];
+      ["{{FORM_DATA}}"; "auth=" & Base64Encode ( RC2FM_GLOBALS::RC_User_Name )  & 
+		If ( not IsEmpty ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "&extension=" & Base64Encode ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "" )  & 
+		"&user_id=" & Base64Encode ( $$extension ) & 
+		"&account_id=" & Base64Encode ( $$account ) & 
+		$$rc2fm_session_id & 
+		"&to=" & Base64Encode ( $$toPhone ) & 
+		"&faxResolution=" & Base64Encode ( "High") & 
+		"&Content-Type=" & Base64Encode ( $$mimeType ) & 
+		"&coverIndex=" & If ( not IsEmpty ( $$coverPageIndex ) ; "&coverIndex=" & Base64Encode ( $$coverPageIndex ) ; "&coverIndex=" & Base64Encode ( "0" ) ) & 
+		"&coverPageText=" & If ( not IsEmpty ( $$coverPageText ) and not IsEmpty ( $$coverPageIndex ); "&coverPageText=" & Base64Encode ( $$coverPageText) ; "" ) & 
+		"&attachment_filename=" & Base64Encode ( $$fileName ) & 
+		"&attachment_content=" & Substitute ( Base64Encode ( GetField ( $$fileContainer ) ) ;[Char ( "10" ); ""]; [Char ( "13" ); ""]; [Char ( "¶" ); ""] )];
+      ["{{FILE_HOST}}"; $FileHost];
+      ["{{FILE_NAME}}"; Get( FileName )]
+    )]
+	#
+	#Submit AJAX form to WebViewer
+	Allow User Abort [On]
+	// Freeze Window
+	Set Web Viewer [Object Name: "ajax_web_viewer"; URL: RC2FM_GLOBALS::API_Functions_Utility_field]
+	Go to Field [Select/perform]
+End If
+#
+#Clean up
+Set Field [RC2FM_GLOBALS::FaxOut_Utility_Container[]; ""]
+#Reset FaxOut global variables
+Set Variable [$$toPhone; Value:""]
+Set Variable [$$fileName; Value:""]
+Set Variable [$$mimeType; Value:""]
+Set Variable [$$fileContainer; Value:""]
+Set Variable [$$coverPageIndex; Value:""]
+Set Variable [$$coverPageText; Value:""]
