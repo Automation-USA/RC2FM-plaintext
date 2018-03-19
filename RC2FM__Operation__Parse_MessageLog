@@ -1,0 +1,69 @@
+#
+#perform parsing operations
+Set Variable [$splitResponse; Value:TrimAll ( RC2FM_GLOBALS::API_Response__RC_download_log ; 1 ; 0 )]
+Set Variable [$splitResponse; Value:Substitute ( $splitResponse ; 
+    [Char ( "10" ); "<CR>"]; 
+    [Char ( "13" ); "<CR>"]; 
+    [Char ( "¶" ); "<CR>"]
+)]
+Set Variable [$splitResponse; Value:Substitute ( $splitResponse ; "|||" ; ¶ )]
+#
+#test for data
+Set Variable [$responseTest; Value:Substitute ( TrimAll ( $splitResponse ; 1 ; 3 ) ; [ ¶ ; "" ] ; [ "<CR>" ; "" ] ; [ " " ; "" ] )]
+If [IsEmpty ( $responseTest )]
+	Exit Script [10]
+End If
+#
+#count number of records in parsed data donwload
+Set Variable [$responseCount; Value:ValueCount ( $splitResponse )]
+#
+#
+#Test if scripts can be executed on Server ( PSoS )
+Perform Script ["Subscript__Validate_Server_Version_≥13"]
+Set Variable [$Hosted_On_Server; Value:Get ( ScriptResult )]
+#
+#Begin log record creation from parsed data download
+#
+If [$Hosted_On_Server = 1 and LeftWords ( Get ( ApplicationVersion ) ; 1 ) ≠ "Server" //not PlatformServer]
+	#Execute record creation loop script on server when possible
+	If [$responseCount > 650]
+		#If data file exceeds script parameter limits, chop data into chunks of 560 records and process in a loop until all records have been submitted
+		Set Variable [$dataChunks; Value:Ceiling ( $responseCount / 560 )]
+		Set Variable [$loopCounter; Value:1]
+		Loop
+			#determine starting and ending records in script payload
+			Set Variable [$startingValue; Value:If ( $loopCounter = 1 ; 1 ; ( $loopCounter - 1 ) * 560 + 1 )]
+			Set Variable [$dataChunkCount; Value:$responseCount - ( If ( $loopCounter = 1 ; 560 ; ( $loopCounter - 1 ) * 560 + 1 )  )]
+			Set Variable [$numberOfValues; Value:If ( $dataChunkCount < 560 ;  $dataChunkCount + 1 ; 560 )]
+			Set Variable [$a_dataChunk; Value:MiddleValues ( 
+//text
+$splitResponse ; 
+//startingValue
+$startingValue ;
+//numberOfValues
+$numberOfValues
+  
+) //end MiddleValues]
+			#
+			#give the FM Server's FMSE a breather every 4 payloads by inserting a script pause after every 4 PSoS calls
+			If [Mod ( $loopCounter ; 5 ) = 0]
+				Pause/Resume Script [Duration (seconds): 1.1]
+			End If
+			#submit data payload as parameter to server-side script
+			Perform Script on Server ["RC2FM__Operation__Create_MessagLog_Records ( param )"; Parameter: $$extension & ¶ & $a_dataChunk]
+			#
+			Set Variable [$loopCounter; Value:$loopCounter + 1]
+			Exit Loop If [$loopCounter > $dataChunks]
+		End Loop
+		#
+	Else
+		#If data file is within script parameter limits, process entire data file in a single server-side script call
+		Perform Script on Server ["RC2FM__Operation__Create_MessagLog_Records ( param )"; Parameter: $$extension & ¶ & $splitResponse]
+	End If
+	#
+Else
+	#Execute record creation loop script locally if not possible on server
+	Perform Script ["RC2FM__Operation__Create_MessagLog_Records ( param )"; Parameter: $splitResponse]
+End If
+#
+#
