@@ -1,0 +1,32 @@
+#Assemble token status url
+Set Variable [$token_status; Value:RC2FM_SETTINGS::RC2FM_BaseURL & "/get_token.php?auth=" & 
+Base64Encode ( RC2FM_GLOBALS::RC_User_Name ) & 
+If ( not IsEmpty ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "&=&extension=" & Base64Encode ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "" ) & "&user_id=" & Base64Encode ( $$extension ) & 
+"&account_id=" & Base64Encode ( $$account ) & 
+"&persistent_id=" & Base64Encode ( Get ( PersistentID ) )]
+#
+#Submit token status request
+Insert from URL [Select; No dialog; RC2FM_GLOBALS::API_Response__Token_Status; $token_status]
+#
+#process api response
+Set Variable [$response; Value:TrimAll ( RC2FM_GLOBALS::API_Response__Token_Status ; 1 ; 2 )]
+If [IsEmpty ( 
+	Substitute ( 
+		TrimAll ( $response ; 1 ; 3 ) ; 
+	¶ ; 
+	"" 
+	) //end Substitute
+ )]
+	Set Field [RC2FM_GLOBALS::API_Response__Token_Status[]; ""]
+	Exit Script [False]
+Else
+	Set Variable [$parsedResponse; Value:Substitute ( $response ; [ ","; ¶ ] ; [ "{" ; ""] ; ["}" ; "" ] ; [ "\"" ; ""] ; [ "+" ; "" ] )]
+End If
+#
+If [PatternCount ( $parsedResponse ; "User is already active" )]
+	Set Field [RC2FM_GLOBALS::API_Response__Token_Status[]; ""]
+	Exit Script [True]
+Else If [PatternCount ( $parsedResponse ; "token expired" )]
+	Set Field [RC2FM_GLOBALS::API_Response__Token_Status[]; ""]
+	Exit Script [False]
+End If
