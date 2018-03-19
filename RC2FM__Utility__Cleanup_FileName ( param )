@@ -1,0 +1,21 @@
+#
+#
+#Test for script parameter
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [958]
+End If
+Set Variable [$fileName; Value:Get ( ScriptParameter )]
+#
+#remove special characters from file name
+Set Variable [$cleaned_name; Value:Let ( [ 
+	FileName = $fileName ;
+	ParsedName = Substitute ( FileName ; "." ; ¶ ) ;
+	FileExtension = "." & RightValues ( ParsedName ; 1 ) ;
+	MinusExtension = Left ( FileName ; ( Length ( FileName ) - Length ( FileExtension ) + 1 ) ) ;
+	CleanName = Substitute ( MinusExtension ; [¶ ; "_"] ; [Char ( "10" ) ; "_"] ; [Char ( "13" ) ; "_"] ; [ "." ; "_"] ; [ " " ; "_" ] ; [ ","; "_" ] ; [ "/" ; "_"] ; [":" ; "_" ] ; [ "&" ; "_and_" ] ; [ "#" ; "_"] ; [ "%" ; "_"] ; [ "@" ; "_" ] ; [ "*" ; ""] ) 
+] ; 
+//calculation
+Substitute ( CleanName & FileExtension ; ¶ ; "" )
+) // end Let]
+#
+Exit Script [$cleaned_name]
