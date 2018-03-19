@@ -1,0 +1,106 @@
+#
+#Test for script parameter
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [958]
+End If
+Set Variable [$splitResponse; Value:Get ( ScriptParameter )]
+If [LeftWords ( Get ( ApplicationVersion ) ; 1 ) = "Server" //PlatformServer]
+	Set Variable [$$extension; Value:LeftValues ( Get ( ScriptParameter ) ; 1 )]
+End If
+#
+#
+If [LeftWords ( Get ( ApplicationVersion ) ; 1 ) ≠ "Server" //not PlatformServer]
+	Freeze Window
+End If
+Go to Layout [$$messageLogLayout]
+#
+#
+Set Variable [$responseCount; Value:ValueCount ( $splitResponse )]
+Set Variable [$LoopCounter; Value:1]
+Loop
+	Set Variable [$a_response; Value:GetValue ( $splitResponse ; $LoopCounter )]
+	Set Variable [$positionTest; Value:Position ( $a_response ; "id=" ; 1 ; 1 )]
+	Set Variable [$trimmedResponse; Value:Middle ( $a_response ; $positionTest ; Length ( $a_response ) )]
+	Set Variable [$parsed_trimmedResponse; Value:Substitute ( $trimmedResponse ; 
+[ "&action=" ; "¶action=" ] ; 
+[ "&attachmentmessageStatus=" ; "¶attachmentmessageStatus=" ] ;
+[ "&attachment_id=" ; "¶attachment_id=" ] ;
+[ "&attachmenturl=" ; "¶attachmenturl=" ] ;
+[ "&attachmentvmDuration=" ; "¶attachmentvmDuration=" ] ;
+[ "&contentType=" ; "¶ContentType=" ] ;
+[ "&conversationId=" ; "¶conversationId=" ] ;
+[ "&conversation=" ; "¶conversation=" ] ;
+[ "&coverIndex=" ; "¶coverIndex=" ] ;
+[ "&coverPageText=" ; "¶coverPageText=" ] ;
+[ "&creationTime=" ; "¶creationTime=" ] ;
+[ "&direction=" ; "¶direction=" ] ;
+[ "&duration=" ; "¶duration=" ] ;
+[ "&faxPageCount=" ; "¶faxPageCount=" ] ;
+[ "&faxResolution=" ; "¶faxResolution=" ] ;
+[ "&fromname=" ; "¶fromname=" ] ;
+[ "&fromlocation=" ; "¶fromlocation=" ] ;
+[ "&fromphoneNumber=" ; "¶fromphoneNumber=" ] ;
+[ "&id=" ; "¶id=" ] ;
+[ "&lastModifiedTime=" ; "¶lastModifiedTime=" ] ;
+[ "&messageStatus=" ; "¶messageStatus=" ] ;
+[ "&priority=" ; "¶priority=" ] ;
+[ "&readStatus=" ; "¶readStatus=" ] ;
+[ "&recordingid=" ; "¶recordingid=" ] ;
+[ "&recordingtype=" ; "¶recordingtype=" ] ;
+[ "&recordingurl=" ; "¶recordingurl=" ] ;
+[ "&result=" ; "¶result=" ] ;
+[ "&sessionId=" ; "¶sessionId=" ] ;
+[ "&startTime=" ; "¶startTime=" ] ;
+[ "&subject=" ; "¶subject=" ] ;
+[ "&tolocation=" ; "¶tolocation=" ] ;
+[ "&toname=" ; "¶toname=" ] ;
+[ "&tophoneNumber=" ; "¶tophoneNumber=" ] ;
+[ "&type=" ; "¶type=" ]
+)]
+	#
+	Set Variable [$responseValueCount; Value:ValueCount ( $parsed_trimmedResponse )]
+	Set Variable [$subLoop_Counter; Value:1]
+	#
+	#begin record creation
+	New Record/Request
+	Loop
+		Set Variable [$a_value; Value:GetValue ( $parsed_trimmedResponse ; $subLoop_Counter )]
+		#
+		If [ValueCount ( Substitute ( $a_value ; "=" ; ¶ ) ) < 2]
+			Set Variable [$subLoop_Counter; Value:$subLoop_Counter + 1]
+		Else If [$a_value = "¶" or $a_avalue = " ¶" or $a_value = " " or IsEmpty ( $a_value )]
+			Set Variable [$subLoop_Counter; Value:$subLoop_Counter + 1]
+		Else
+			Set Variable [$fieldName; Value:LeftValues ( Substitute ( $a_value ; "=" ; ¶ ) ; 1 )]
+			Set Variable [$fieldName; Value:$$messageLogTO & Substitute ( $fieldName ; ¶ ;  "" )]
+			Set Variable [$fieldValue; Value:RightValues ( Substitute ( $a_value ; "=" ; ¶ ) ; ValueCount ( $a_value - 1 ) )]
+			#
+			If [not IsEmpty ( $fieldValue )]
+				Set Field By Name [$fieldName; Left ( $fieldValue ; Length ( $fieldValue ) - 1 )]
+			End If
+			#
+			#populate call recording 'ContentType' field (data not provided in download)
+			If [not IsEmpty ( GetField ( $$messageLogTO & "recordingid" ) )]
+				Set Field By Name [$$messageLogTO & "ContentType"; "audio/mpeg"]
+				Set Field By Name [$$messageLogTO & "creationTime"; GetField ( $$messageLogTO & "startTime" )]
+			End If
+			#
+			Set Variable [$subLoop_Counter; Value:$subLoop_Counter + 1]
+		End If
+		#
+		Exit Loop If [$subLoop_Counter > $responseValueCount]
+		#
+	End Loop
+	#
+	#delete empty record
+	If [IsEmpty ( GetField ( $$messageLogTO & "creationTime" ) ) and IsEmpty ( GetField ( $$messageLogTO & "id" ) )]
+		Delete Record/Request [No dialog]
+	End If
+	#
+	Set Variable [$LoopCounter; Value:$LoopCounter + 1]
+	Exit Loop If [$LoopCounter > $responseCount]
+End Loop
+#
+If [not LeftWords ( Get ( ApplicationVersion ) ; 1 ) ≠ "Server" //not PlatformServer]
+	Go to Layout [original layout]
+End If
