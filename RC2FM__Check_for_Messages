@@ -1,0 +1,33 @@
+#
+#If user is logged into RingCentral, check for existence of log records in FileMaker log table
+If [not IsEmpty ( $$extension )]
+	#
+	Perform Script ["Subscript__Get_Quoted_Field_Name ( param )"; Parameter: $$messageLogTO & "_kan_RC_extension_id"]
+	Set Variable [$fieldName; Value:Get ( ScriptResult )]
+	Perform Script ["Subscript__Get_Quoted_Table_Occurrence_Name ( param )"; Parameter: $$messageLogTO & "_kan_RC_extension_id"]
+	Set Variable [$TOname; Value:Get ( ScriptResult )]
+	Set Variable [$SQL; Value:ExecuteSQL ( 
+"SELECT " & $fieldName & 
+" FROM " & $TOname & 
+" WHERE " & $fieldName & " = " & $$extension  ; 
+", " ; ¶ ; ""
+ )]
+	#
+	#If less than 2 matching log records are found a complete history download is initiated
+	If [ValueCount ( $SQL ) < 2]
+		Perform Script ["RC2FM__Function__GetMessages_SUBMIT ( param )"]
+		Perform Script ["RC2FM__Function__GetRecordings_SUBMIT ( param )"]
+	Else
+		#If more than 2 matching log records are found, an incremental download of the past 6 seconds of activity is initiated
+		Perform Script ["RC2FM__Utility__Convert_Timestamp_to_UNIX ( param )"; Parameter:  Get ( CurrentHostTimestamp ) - 6]
+		Set Variable [$unixTime; Value:Get ( ScriptResult )]
+		#
+		If [Length ( $unixTime ) > 11]
+			Perform Script ["RC2FM__Function__GetMessages_SUBMIT ( param )"; Parameter: $unixTime]
+			Perform Script ["RC2FM__Function__GetRecordings_SUBMIT ( param )"; Parameter: $unixTime]
+		End If
+		#
+	End If
+	#
+End If
+#
