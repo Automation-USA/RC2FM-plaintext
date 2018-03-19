@@ -1,0 +1,15 @@
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [958]
+End If
+#
+Set Variable [$fieldRef; Value:Get ( ScriptParameter )]
+Exit Script [Let( [
+	_fieldRef = If( PatternCount( $fieldRef ; "::" ) = 0 ; GetFieldName( $fieldRef ) ; $fieldRef ) ;
+	_split = Substitute ( _fieldref ; "::"; "¶") ;	
+	_field = GetValue( _split ; 1 )
+	];
+	_field
+)
+/*2013-11-26  Wim Decorte
+parses a field reference a returns a quoted TO name
+( original function name: "_FieldRef_getTO")*/]
