@@ -1,0 +1,81 @@
+#
+Allow User Abort [Off]
+#Test for global variables
+If [IsEmpty ( $$smsTo ) or IsEmpty ( $$message )]
+	Exit Script [958]
+End If
+#
+#Filter out non E164 characters
+Set Variable [$$smsTo; Value:Filter ( $$smsTo ; "0123456789+" )]
+#
+#Test for live token
+Perform Script ["RC2FM__Check_Session_Status"]
+Set Variable [$tokenStatus; Value:Get ( ScriptResult )]
+#
+#Process token test response
+If [$tokenStatus = 0 and not IsEmpty ( RC2FM_GLOBALS::RC_User_Name ) & not IsEmpty ( RC2FM_GLOBALS::RC_User_Password )]
+	Perform Script ["RC2FM__Login"]
+	If [IsEmpty ( $$extension )]
+		Exit Script ["No active session and no user credentials"]
+	End If
+Else If [$tokenStatus = 0 and IsEmpty ( RC2FM_GLOBALS::RC_User_Name ) or IsEmpty ( RC2FM_GLOBALS::RC_User_Password )]
+	Exit Script ["No active session and no user credentials"]
+End If
+#
+#Proceed with SMS
+Set Variable [$$smsFrom; Value:$$DirectNumber
+//If ( $$admin = True or IsEmpty ( $$DirectNumber ); $$MainCompanyNumber ; $$DirectNumber )
+//If ( IsEmpty ( $$DirectNumber) ; Settings::RC_Username ; $$DirectNumber )]
+#
+#Initialize session variables
+Perform Script ["RC2FM__Subscript_Build_Session_ID"]
+#
+#Capture host IP for AJAX response
+Set Variable [$FileHost; Value:Case (
+    Get ( HostIPAddress ) = "" ;
+    "$";  // File is local
+    Get ( HostIPAddress )
+)]
+#
+#Substitute variables in AJAX template
+Set Field [RC2FM_GLOBALS::API_Response__RC_Reply[]; "Loading..."]
+#
+#Use Insert from URL method on WebDirect platform
+If [PatternCount( Get ( ApplicationVersion ) ; "Web" ) //PlatformWeb]
+	Set Variable [$url; Value:RC2FM_SETTINGS::RC2FM_BaseURL & "/api/v1.php?action=sms&auth=" & 
+Base64Encode ( RC2FM_GLOBALS::RC_User_Name )  & If ( not IsEmpty ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "&extension=" & Base64Encode ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "" )  & 
+"&user_id=" & Base64Encode ( $$extension ) & 
+"&account_id=" & Base64Encode ( $$account ) & 
+$$rc2fm_session_id & 
+"&from=" & Base64Encode ( $$smsFrom ) & 
+"&to=" & Base64Encode ( $$smsTo ) & 
+"&text=" & ( Base64Encode ( $$message ) )]
+	Insert from URL [Select; No dialog; RC2FM_GLOBALS::API_Response__RC_Reply; $url]
+	Go to Field [Select/perform]
+Else
+	Set Variable [$url; Value:Let
+(
+[
+  $html = Substitute ( 
+      RC2FM_SETTINGS::RC_HtmlAjaxTemplate; 
+      ["{{URL}}"; RC2FM_SETTINGS::RC2FM_BaseURL & "/api/v1.php?action=sms&auth=" & Base64Encode ( RC2FM_GLOBALS::RC_User_Name ) & If ( not IsEmpty ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "&extension=" & Base64Encode ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "" ) & "&user_id=" & Base64Encode ( $$extension ) & "&account_id=" & Base64Encode ( $$account ) & $$rc2fm_session_id ];
+      ["{{FORM_DATA}}"; "from=" & Base64Encode ( $$smsFrom ) & "&to=" & Base64Encode ( $$smsTo ) & "&text=" &  ( Base64Encode ( $$message ) )];
+      ["{{FILE_HOST}}"; $FileHost];
+      ["{{FILE_NAME}}"; Get( FileName )]
+    ) 
+];
+"data:text/html," & $html
+)]
+	#Submit to WebViewer
+	// Freeze Window
+	Set Web Viewer [Object Name: "ajax_web_viewer"; URL: $url]
+	Go to Field [Select/perform]
+End If
+#
+#Clean up
+Set Field [RC2FM_GLOBALS::SMS_Input_Field[]; ""]
+Set Variable [$$smsFrom; Value:""]
+Set Variable [$$smsTo; Value:""]
+Set Variable [$$message; Value:""]
+#
+#
