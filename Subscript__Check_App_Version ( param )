@@ -1,0 +1,9 @@
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [958]
+End If
+#
+Set Variable [$AppName; Value:Get ( ScriptParameter )]
+Exit Script [Let ( [ NumberString = RightWords ( $AppName ; 1 )  ] ; GetAsNumber ( Int ( NumberString) ) )
+//Parses "Get ( ApplicationVersion )" function to return version number interger ( only )
+//Written by Julio Toledo, Automation USA, LLC 8/7/2014
+//http://www.automationusa.net]
