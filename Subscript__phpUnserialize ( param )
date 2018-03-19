@@ -1,0 +1,33 @@
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [958]
+End If
+#
+Set Variable [$param; Value:Get ( ScriptParameter )]
+Exit Script [// s:19:"http://360works.com"; 
+// n:42;
+Let (  [ 
+    trimmed = Left ( $param ; Length ( $param ) - 1 ) ; // remove semicolon
+    p1 = Position ( trimmed ; ":" ; 1 ; 1 ) ; // first colon, should always = 2
+    p2 = Position ( trimmed ; ":" ; 1 ; 2) ; // second colon, only for string types
+    type = Left ( trimmed ; p1 -1 ) ;
+    v2 = Middle ( trimmed ; p1 + 1; p2-p1);
+    v3 = Middle ( trimmed ; p2 + 1 ; Length(trimmed) - p2 )
+] ;
+    Case ( 
+        IsEmpty($param) ; // empty input
+            "" ;
+        type = "N" ;  // null
+            "" ;
+        type = "b" ; // boolean
+            GetAsBoolean( v2 ) ;
+        type = "i" ; // integer
+            GetAsNumber( v2 ) ;
+        type = "s" ;
+            Middle ( v3 ; 2 ; v2 ) ;
+        type = "a" ;
+            $param ; // not yet supported
+        type = "O" ;
+            $param ; // not yet supported
+        "Unknown serialize format in " & $param
+    )
+)]
