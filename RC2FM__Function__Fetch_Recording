@@ -1,0 +1,56 @@
+#
+#Test for live token
+Perform Script ["RC2FM__Check_Session_Status"]
+Set Variable [$tokenStatus; Value:Get ( ScriptResult )]
+#
+#Process token test response
+If [$tokenStatus = 0 and not IsEmpty ( RC2FM_GLOBALS::RC_User_Name ) & not IsEmpty ( RC2FM_GLOBALS::RC_User_Password )]
+	Perform Script ["RC2FM__Login"]
+	If [IsEmpty ( $$extension )]
+		Exit Script ["No active session and no user credentials"]
+	End If
+Else If [$tokenStatus = 0 and IsEmpty ( RC2FM_GLOBALS::RC_User_Name ) or IsEmpty ( RC2FM_GLOBALS::RC_User_Password )]
+	Exit Script ["No active session and no user credentials"]
+End If
+#
+#Proceed with Fetching Recording
+#
+#Fetch Base64 file
+Set Variable [$url; Value:RC2FM_SETTINGS::RC2FM_BaseURL & "/get_call_attachments.php?auth=" & 
+Base64Encode ( RC2FM_GLOBALS::RC_User_Name ) & If ( not IsEmpty ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "&extension=" & 
+Base64Encode ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "" )  & 
+"&user_id=" & Base64Encode ( $$extension ) & 
+"&account_id=" & Base64Encode ( $$account ) & 
+$$rc2fm_session_id & 
+"&attachment_id=" & Base64Encode ( RC2FM_LOGS::recordingid )]
+Set Error Capture [On]
+Insert from URL [Select; No dialog; RC2FM_LOGS::recordingurl; $url]
+If [Get ( LastError ) ≠ 0]
+	Exit Script []
+End If
+#trim spaces
+Set Field [RC2FM_LOGS::recordingurl[]; TrimAll ( RC2FM_LOGS::recordingurl ; 1 ; 3 )]
+#
+#Test if scripts can be executed on Server ( PSoS )
+Perform Script ["Subscript__Validate_Server_Version_≥13"]
+Set Variable [$Hosted_On_Server; Value:Get ( ScriptResult )]
+#
+If [not IsEmpty ( RC2FM_LOGS::recordingurl ) and IsEmpty ( RC2FM_ATTACHMENTS::rawBase64 )]
+	#
+	#capture Base64 path
+	Set Variable [$Base64_URL; Value:GetField ( $$messageLogTo & "recordingurl" )]
+	#Insert Base64 raw data
+	Freeze Window
+	Insert from URL [Select; No dialog; RC2FM_ATTACHMENTS::rawBase64; $Base64_URL]
+	Go to Field [Select/perform]
+	#
+	If [$Hosted_On_Server = 1 and LeftWords ( Get ( ApplicationVersion ) ; 1 ) ≠ "Server" //not PlatformServer]
+		Perform Script on Server ["RC2FM__Operation__Decode_Binary ( param )"; Parameter: RC2FM_LOGS::_kpn_log_id]
+	Else
+		#Execute record creation loop script locally if not possible on server
+		Perform Script ["RC2FM__Operation__Decode_Binary ( param )"; Parameter: RC2FM_LOGS::_kpn_log_id]
+	End If
+	#
+End If
+#
+#
