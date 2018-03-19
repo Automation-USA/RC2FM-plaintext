@@ -1,0 +1,14 @@
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [958]
+End If
+#
+Set Variable [$fileSize; Value:Get ( ScriptParameter )]
+If [$fileSize > 5 and PatternCount( Get ( ApplicationVersion ) ; "Web" ) //PlatformWeb]
+	Perform Script ["RC2FM__Fail [Internal]"; Parameter: "{\"error\":511,\"message\":" & "FaxOut upload file size limit for WebDirect is 5 KB" & "}"]
+	Exit Script [False]
+Else If [$fileSize > 19100]
+	Perform Script ["RC2FM__Fail [Internal]"; Parameter: "{\"error\":511,\"message\":" & "FaxOut upload file size limit is 20 MB" & "}"]
+	Exit Script [False]
+End If
+#
+Exit Script [True]
