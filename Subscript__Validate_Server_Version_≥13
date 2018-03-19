@@ -1,0 +1,28 @@
+#Name:
+Subscript__Validate_Server_Version_≥13
+History:
+Created by Automation USA - Julio
+Last Modified: 4-3-2014
+Purpose:
+Validates that file is hosted on a server, opened on a client,and that the server can execute remote procedures (Perform Script of Nserver)
+Parameters:
+None
+Important Notes:
+None
+#
+If [PatternCount ( Get ( ApplicationVersion );  "Server" )]
+	Exit Script [False]
+Else If [Get ( ConnectionState ) = 0]
+	Exit Script [False]
+Else If [not PatternCount ( Get ( HostApplicationVersion ) ; "Server" )]
+	Exit Script [False]
+End If
+#
+Perform Script ["Subscript__Check_App_Version ( param )"; Parameter:  Get ( HostApplicationVersion )]
+Set Variable [$VersionNumber; Value:Get ( ScriptResult )]
+#
+If [$VersionNumber ≥ 13]
+	Exit Script [True]
+Else
+	Exit Script [False]
+End If
