@@ -31,6 +31,7 @@ Base64Encode ( RC2FM_GLOBALS::RC_User_Name ) & If ( not IsEmpty ( RC2FM_GLOBALS:
 Base64Encode ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "" )  & 
 "&user_id=" & Base64Encode ( $$extension ) & 
 "&account_id=" & Base64Encode ( $$account ) & 
+"&phone_number=" & Base64Encode ( "all" ) &
 $$rc2fm_session_id & 
 If ( not IsEmpty ( $dateFrom ) ; "&dateFrom=" & Base64Encode ( $dateFrom ) ; "" )
 //example 'dateFrom' parameter: "2016-06-16T10:48:20.000Z"]
