@@ -1,0 +1,40 @@
+#Test for script parameter
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [958]
+End If
+Set Variable [$recordID; Value:Get ( ScriptParameter )]
+#
+#Determine if search needs to be performed or record is already current
+If [LeftWords ( Get ( ApplicationVersion ) ; 1 ) = "Server" 
+or
+Get ( LayoutName ) ≠ $$messageLogLayout 
+or
+Get ( LayoutName ) = $$messageLogLayout and RC2FM_LOGS::_kpn_log_id ≠ $recordID
+or
+LeftWords ( Get ( ApplicationVersion ) ; 1 ) = "Server" //PlatformServer]
+	Go to Layout [$$messageLogLayout]
+	Enter Find Mode []
+	Set Field [RC2FM_LOGS::_kpn_log_id[]; "==" & $recordID]
+	#
+	Set Error Capture [On]
+	Perform Find []
+	If [Get ( LastError ) ≠ 0 or Get ( FoundCount ) ≠ 1]
+		Exit Script [401]
+	End If
+End If
+#
+#Process (decode) attachment
+Set Variable [$contentType; Value:GetField ( $$messageLogTO & "ContentType" )]
+If [not IsEmpty ( $$attachmentsTO & "rawBase64" )]
+	If [$contentType = "application/pdf"]
+		Set Variable [$fileNameWithExtension; Value:GetField ( $$messageLogTO & "id" ) & ".pdf"]
+		Set Field By Name [$$attachmentsTO & "binary"; Base64Decode ( GetField ( $$attachmentsTO & "rawBase64" ) ; $fileNameWithExtension )]
+	Else If [GetField ( $$messageLogTO & "type" ) = "VoiceMail" or not IsEmpty ( GetField ( $$messageLogTO & "recordingid" ) )]
+		Set Variable [$fileNameWithExtension; Value:GetField ( $$messageLogTO & "id" ) & ".mp3"]
+		Set Field By Name [$$attachmentsTO & "binary"; Base64Decode ( GetField ( $$attachmentsTO & "rawBase64" ) ; $fileNameWithExtension )]
+	End If
+End If
+#
+If [LeftWords ( Get ( ApplicationVersion ) ; 1 ) ≠ "Server" //PlatformServer]
+	Go to Layout [original layout]
+End If
