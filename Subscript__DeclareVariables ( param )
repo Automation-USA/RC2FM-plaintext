@@ -1,0 +1,38 @@
+// If [IsEmpty ( Get ( ScriptParameter ) )]
+	// Exit Script [958]
+// End If
+#
+Set Variable [$param; Value:"fileName: " & "MyFileName" & "; " & "mimeType: " & "audio/mpeg" & "; "
+//Get ( ScriptParameter )]
+Set Variable [$param_count; Value:ValueCount ( Substitute ( $param ; "; " ; ¶ ) )]
+#
+Set Variable [$LoopCounter; Value:1]
+Loop
+	Set Variable [$LoopCounter; Value:$LoopCounter + 1]
+	Exit Loop If [$LoopCounter > $param_count]
+End Loop
+Exit Script [Case(
+  not IsEmpty( $param );
+  Let(
+    [
+      kN = Substitute($param; [¶; ""]; [" "; ""]; [";"; ""]);
+      kF = Left(kN; 1);
+      kL = Right(kN; 1);
+      k1 = Position($param; kF; 1; 1);
+      k2 = Position($param; kL; Length($param); -1);
+      kP = Middle($param; k1; k2 - k1 + 1);
+      pS = Substitute(kP; [":¶"; ": "]; [";¶"; "; "]; [¶; "\¶"]);
+      p1 = Position(pS & " "; ": "; 1; 1) + 2;
+      q1 = Left(Trim(Middle(pS; p1; Length(pS) - p1 - 1)); 1);
+      s1 = q1 = "\"";
+      t2 = Choose(s1; "; "; "\"; ");
+      q2 = Left("\""; 1 - s1);
+      p2 = Position(pS & t2; t2; 1; 1);
+      n1 = Left(pS; p1 - 3);
+      c1 = Trim(Middle(pS; p1; p2 - p1 + s1));
+      v1 = Evaluate("Let($$" & n1 & " = " & q2 & c1 & q2 & "; \"\")");
+      r1 = Right(pS; Length(pS) - p2 - 1 - s1)
+    ];
+    DeclareVariables ( Trim(r1) )
+  )
+)]
