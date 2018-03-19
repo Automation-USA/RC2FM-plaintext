@@ -1,0 +1,44 @@
+#
+#Test for live token
+Perform Script ["RC2FM__Check_Session_Status"]
+Set Variable [$tokenStatus; Value:Get ( ScriptResult )]
+#
+#Capture 'dateFrom' parameter
+If [not IsEmpty ( Get ( ScriptParameter ) )]
+	Set Variable [$dateFrom; Value:Get ( ScriptParameter )]
+End If
+#
+#Process token test response
+If [$tokenStatus = 0 and not IsEmpty ( RC2FM_GLOBALS::RC_User_Name ) & not IsEmpty ( RC2FM_GLOBALS::RC_User_Password )]
+	Perform Script ["RC2FM__Login"]
+	If [IsEmpty ( $$extension )]
+		Exit Script ["No active session and no user credentials"]
+	End If
+Else If [$tokenStatus = 0 and IsEmpty ( RC2FM_GLOBALS::RC_User_Name ) or IsEmpty ( RC2FM_GLOBALS::RC_User_Password )]
+	Exit Script ["No active session and no user credentials"]
+End If
+#
+#Proceed with GetMessages
+#Clear msg.php raw data field (if any)
+If [not IsEmpty ( RC2FM_GLOBALS::API_Response__RC_download_log )]
+	Set Field [RC2FM_GLOBALS::API_Response__RC_download_log[]; ""]
+End If
+#
+#Fetch new data and insert into field
+Set Error Capture [On]
+Set Variable [$url; Value:RC2FM_SETTINGS::RC2FM_BaseURL & "/calllog.php?auth=" & 
+Base64Encode ( RC2FM_GLOBALS::RC_User_Name ) & If ( not IsEmpty ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "&extension=" & 
+Base64Encode ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "" )  & 
+"&user_id=" & Base64Encode ( $$extension ) & 
+"&account_id=" & Base64Encode ( $$account ) & 
+$$rc2fm_session_id & 
+If ( not IsEmpty ( $dateFrom ) ; "&dateFrom=" & Base64Encode ( $dateFrom ) ; "" )
+//example 'dateFrom' parameter: "2016-06-16T10:48:20.000Z"]
+Insert from URL [Select; No dialog; RC2FM_GLOBALS::API_Response__RC_download_log; $url]
+Go to Field [Select/perform]
+#
+#if insert is successful, call parse URL operations
+Set Variable [$errorNum; Value:Get ( LastError )]
+If [$errorNum = 0 //and not PatternCount ( General_Log::_fm_RC_api_Response ; "error" )]
+	Perform Script ["RC2FM__Operation__Parse_MessageLog"]
+End If
