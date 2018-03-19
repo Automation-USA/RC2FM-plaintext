@@ -1,0 +1,35 @@
+#Gather required environment parameters
+Perform Script ["RC2FM__Subscript_Build_Session_ID"]
+// Set Variable [$session_id; Value:Get ( ScriptResult )]
+#
+#Compile logout url
+Set Variable [$Logout; Value:RC2FM_SETTINGS::RC2FM_BaseURL & "/logout.php?auth=" & 
+Base64Encode (  Filter ( RC2FM_GLOBALS::RC_User_Name  ; "0123456789+" ) ) & 
+If ( not IsEmpty ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "&extension=" & 
+Base64Encode ( RC2FM_GLOBALS::RC_User_ExtNumber ) ; "" ) & 
+$$rc2fm_session_id]
+#
+#Submit Logout request
+Insert from URL [Select; No dialog; RC2FM_GLOBALS::API_Response__Auth; $Logout]
+#unlock record
+Go to Field [Select/perform]
+#
+#process api response
+If [PatternCount ( RC2FM_GLOBALS::API_Response__Auth ; "{\"success\":98,\"message\":\"You are sucessfully logged out.\"}" )]
+	// If [PatternCount ( GetField  ( GetFieldName ( RC2FM_GLOBALS::API_Response__Auth ) ) ;  "sucessfully logged out" )]
+		Set Variable [$$account; Value:""]
+		Set Variable [$$extension; Value:""]
+		Set Variable [$$MainCompanyNumber; Value:""]
+		Set Variable [$$CompanyFaxNumber; Value:""]
+		Set Variable [$$CompanyNumber; Value:""]
+		Set Variable [$$DirectNumber; Value:""]
+		Set Variable [$$extensionNumber; Value:""]
+		Set Variable [$$admin; Value:""]
+	// End If
+End If
+#
+#Clean up
+Set Field [RC2FM_GLOBALS::RingOut_CallerID_Selected[]; ""]
+Set Field [RC2FM_GLOBALS::FaxOut_Utility_Container[]; ""]
+Set Field [DEMO_USER_SESSIONS__user_session_id::RC_CallerID_Choices[]; ""]
+Refresh Window []
