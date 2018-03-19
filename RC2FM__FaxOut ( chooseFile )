@@ -1,0 +1,89 @@
+#
+#Capture destination fax number
+Set Variable [$toPhone; Value:Get ( ScriptParameter )]
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [958]
+End If
+#
+#Insert user selected FaxOut doucument into container field
+If [Abs ( Get ( SystemPlatform ) ) = 3]
+	Allow User Abort [Off]
+	Show Custom Dialog ["Choose source"; "Choose Fax document source"]
+	Allow User Abort [On]
+	If [Get ( LastMessageChoice ) = 1]
+		Set Error Capture [On]
+		Insert from Device [RC2FM_GLOBALS::FaxOut_Utility_Container; Type: Photo Library]
+		If [Get ( LastError ) ≠ 0]
+			Exit Script []
+		End If
+	Else If [Get ( LastMessageChoice ) = 2]
+		Set Error Capture [On]
+		Insert from Device [RC2FM_GLOBALS::FaxOut_Utility_Container; Type: Camera; Camera: Back; Resolution: Medium]
+		If [Get ( LastError ) ≠ 0]
+			Exit Script []
+		End If
+	Else
+		Set Error Capture [On]
+		Insert File [RC2FM_GLOBALS::FaxOut_Utility_Container[]]
+		If [Get ( LastError ) ≠ 0]
+			Exit Script []
+		End If
+	End If
+Else
+	Set Error Capture [On]
+	Insert File [RC2FM_GLOBALS::FaxOut_Utility_Container[]]
+	If [Get ( LastError ) ≠ 0]
+		Exit Script []
+	End If
+End If
+#
+#Validate container file size against platform and API restrictions
+Set Variable [$fileSize; Value:Round ( 
+//number
+GetContainerAttribute ( RC2FM_GLOBALS::FaxOut_Utility_Container ; "fileSize" ) / 1024 ; 
+//precision
+0
+ )]
+#
+Perform Script ["RC2FM__FaxOut_Validate_FileSize ( param )"; Parameter: $fileSize]
+Set Variable [$result; Value:Get ( ScriptResult )]
+If [IsEmpty ( $result ) or $result = 0]
+	Set Field [RC2FM_GLOBALS::FaxOut_Utility_Container[]; ""]
+	Exit Script []
+End If
+#
+#Parse container's file name and remove offending characters
+Allow User Abort [Off]
+Perform Script ["RC2FM__Utility__Cleanup_FileName ( param )"; Parameter: GetContainerAttribute ( RC2FM_GLOBALS::FaxOut_Utility_Container ; "Filename" )]
+Set Variable [$fileName; Value:Get ( ScriptResult )]
+If [IsEmpty ( $fileName or $fileName = 958 )]
+	Perform Script ["RC2FM__Fail [Internal]"; Parameter: "{\"error\":10,\"message\":" & "File name is invalid or missing." & "}"]
+	Set Field [RC2FM_GLOBALS::FaxOut_Utility_Container[]; ""]
+	Exit Script []
+End If
+#
+#Validate file type against supported MIME types
+Perform Script ["RC2FM__Subscript__FaxOut_Validate ( param )"; Parameter: $fileName]
+Set Variable [$mimeType; Value:Get ( ScriptResult )]
+If [IsEmpty ( $mimeType or $mimeType = 0 )]
+	Set Field [RC2FM_GLOBALS::FaxOut_Utility_Container[]; ""]
+	Exit Script []
+End If
+#
+#Declare FaxOut global variables
+Set Variable [$$toPhone; Value:$toPhone]
+Set Variable [$$fileName; Value:$fileName]
+Set Variable [$$mimeType; Value:$mimeType]
+Set Variable [$$fileContainer; Value:GetFieldName ( RC2FM_GLOBALS::FaxOut_Utility_Container )]
+#
+#Submit FaxOut request
+Perform Script ["RC2FM__Function__FaxOut_SUBMIT ( params )"]
+#
+#Process response
+Set Variable [$result; Value:Get ( ScriptResult )]
+If [IsEmpty ( $result ) or $result = 958]
+	Perform Script ["RC2FM__Fail [Internal]"; Parameter: "{\"error\":958,\"message\":" & "FaxOut parameters missing." & "}"]
+End If
+#
+Set Field [RC2FM_GLOBALS::FaxOut_Utility_Container[]; ""]
+#
