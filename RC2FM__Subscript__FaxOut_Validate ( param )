@@ -1,0 +1,46 @@
+#Parse file name and remove offending characters from filename
+Allow User Abort [Off]
+#
+#Test for script parameter
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [958]
+End If
+Set Variable [$fileName; Value:Get ( ScriptParameter )]
+#
+#Separate file extension from file name
+Set Variable [$fileName; Value:Let ( [ 
+FileName = $fileName ;
+ParsedName = Substitute ( FileName ; "." ; ¶ ) ;
+FileExtension = "." & RightValues ( ParsedName ; 1 ) ;
+MinusExtension = Left ( FileName ; ( Length ( FileName ) - Length ( FileExtension ) + 1 ) ) ;
+CleanName = Substitute ( MinusExtension ; " " ; "_" ) ] ; 
+//calculation
+Substitute ( CleanName & FileExtension ; ¶ ; "" )
+) // end Let]
+#
+#Parse file extension 
+Set Variable [$fileExtension; Value:Let ( [ 
+ParsedName = Substitute ( $fileName ; "." ; ¶ ) ;
+FileExtension = RightValues ( ParsedName ; 1 ) ] ;
+//calculation
+Substitute ( FileExtension ; ¶ ; "" )
+) // end Let]
+#
+#Validate file extension against supported MIME types
+If [IsEmpty ( $fileExtension )]
+	Perform Script ["RC2FM__Fail [Internal]"; Parameter: "{\"error\":958,\"message\":" & "Unable to determine FaxOut file type. File extension not provided/not available." & "}"]
+	Exit Script [False]
+End If
+#
+Perform Script ["RC2FM__FaxOut_Validate_MIME_Type ( param )"; Parameter: $fileExtension]
+Set Variable [$mimeType; Value:Get ( ScriptResult )]
+#
+If [IsEmpty ( $mimeType ) or $mimeType = "400"]
+	Perform Script ["RC2FM__Fail [Internal]"; Parameter: "{\"error\":400,\"message\":" & "Unable to determine FaxOut file type." & "}"]
+	Exit Script [False]
+Else If [$mimeType = "417"]
+	Perform Script ["RC2FM__Fail [Internal]"; Parameter: "{\"error\":417,\"message\":" & "Unsupported FaxOut file type." & "}"]
+	Exit Script [False]
+Else
+	Exit Script [$mimeType]
+End If
