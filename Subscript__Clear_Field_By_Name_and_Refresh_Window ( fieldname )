@@ -1,0 +1,27 @@
+#Name:
+Subscript__Clear_Field_By_Name_and_Refresh_Window ( fieldname )
+History:
+Created by Automation USA - Julio
+Created: 6-4-2013
+Last Modified: 7-4-2016
+Purpose:
+Generic script used to clear a field by name and refresh the windo
+Parameters:
+Field Name
+Important Notes:
+Dependency on subscript "Set_Field_By_Name ( fieldname, fieldvalues )"
+#
+#
+Allow User Abort [Off]
+#
+#Escape if parameter is not supplied
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script []
+End If
+#
+#Call set field subscript
+Perform Script ["Subscritpt__Set_Field_By_Name ( fieldname, fieldvalues )"; Parameter: Get ( ScriptParameter ) & ¶ & ""]
+#
+#Call unlock and refresh window subscript
+Go to Field [Select/perform]
+Refresh Window []
