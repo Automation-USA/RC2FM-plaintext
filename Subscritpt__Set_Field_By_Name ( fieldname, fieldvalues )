@@ -1,0 +1,23 @@
+#Name:
+Subscript__Set_Field_By_Name ( fieldname )
+History:
+Created by Automation USA - Julio
+Created: 6-4-2013
+Last Modified: 6-4-2013
+Purpose:
+Generic script used to clear a field by name
+Parameters:
+Field Name, field contents (return delimited values)
+Important Notes:
+None
+#
+Allow User Abort [Off]
+#
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script []
+End If
+#
+Set Variable [$fieldname; Value:GetValue ( Get ( ScriptParameter ) ; 1 )]
+Set Variable [$fieldvalue; Value:RightValues ( Get ( ScriptParameter )  ; ( ValueCount ( Get ( ScriptParameter ) )  - 1 ) )]
+#
+Set Field By Name [$fieldname; Left ( $fieldvalue ; Length ( $fieldvalue ) - 1 )]
