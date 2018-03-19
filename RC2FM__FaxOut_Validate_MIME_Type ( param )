@@ -1,0 +1,45 @@
+#Validate file agains RingCentral® supported_MIME_Types
+If [IsEmpty ( Get ( ScriptParameter ) )]
+	Exit Script [417]
+End If
+#
+Set Variable [$fileExtension; Value:Get ( ScriptParameter )]
+Exit Script [Let ( [
+	extension = Substitute ( $fileExtension ; "." ; "" ) ] ; 
+	//calculation
+	Case (
+		
+		IsEmpty ( extension ) ; "400" ;
+		extension = "pdf" ; "application/pdf" ;
+		extension = "psd" ; "image/vnd.adobe.photoshop" ;
+		extension = "doc" ; "application/msword" ;
+		extension = "docm" ; "application/vnd.ms-word.document.macroenabled.12" ;
+		extension = "docx" ; "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ;
+		extension = "xls" ; "application/vnd.ms-excel" ;
+		extension = "xlsb" ; "application/vnd.ms-excel.sheet.binary.macroenabled.12" ;
+		extension = "xlsm" ; "application/vnd.ms-excel.sheet.macroenabled.12" ;
+		extension = "xlsx" ; "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ;
+		extension = "ppt" ; "application/vnd.ms-powerpoint" ;
+		extension = "pptm" ; "application/vnd.ms-powerpoint.presentation.macroenabled.12" ;
+		extension = "pptx" ; "application/vnd.openxmlformats-officedocument.presentationml.presentation" ;
+		extension = "vsd" ; "application/vnd.visio" ;
+		extension = "pub" ; "application/x-mspublisher" ;
+		extension = "wps" ; "application/vnd.ms-works" ;
+		extension = "wri" ; "application/x-mswrite" ;
+		extension = "tiff" or extension = "tif" ; "image/tiff" ;
+		extension = "jpeg" or extension = "jpg" ; "image/jpeg" ;
+		extension = "gif" ; "image/gif" ;
+		extension = "bmp" ; "image/bmp" ;
+		extension = "png" ; "image/png" ;
+		extension = "pcx" ; "image/x-pcx" ;
+		extension = "tga" ; "image/x-tga" ;
+		extension = "wpd" ; "application/vnd.wordperfect" ;
+		extension = "htm" or extension = "html" ; "text/html" ;
+		extension = "rtf" ; "application/rtf" ;
+		extension = "txt" ; "text/plain" ;
+		extension = "xml" ; "application/xml" ;
+		extension = "csv" ; "text/csv" ;
+		//default result
+		"417" 
+	) //end Case
+) //end Let]
